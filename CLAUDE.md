@@ -2,9 +2,7 @@
 
 ## What this project is
 
-A personal dashboard / portfolio site built for Sanjay Waugh (Junior Builder at Creative Elements). It shows a profile, a short bio, a "what I'm building" section, and a portfolio of projects built during Week 1. It is a single Next.js application deployed as a static-friendly site.
-
-The intended audience is anyone who wants to see Sanjay's work — it is a real public-facing site, not a demo or exercise project.
+A personal dashboard / portfolio site for Sanjay Waugh (Junior Builder at creativelements.org). It shows a profile, bio, contact card, GitHub activity feed, a "What I'm building" section, and a portfolio of projects. It is a real public-facing site deployed on Vercel — not a demo.
 
 ---
 
@@ -18,7 +16,13 @@ npm run start      # serves the production build
 npm run lint       # ESLint
 ```
 
-Node.js ≥ 18 required. No environment variables needed — all data is static.
+Node.js ≥ 18 required. No environment variables needed — all data is static. The GitHub Activity section fetches from the public GitHub API client-side (no token required, subject to rate limiting).
+
+---
+
+## Deployment
+
+Deployed on **Vercel**. Push to `main` triggers a production deploy automatically. No build configuration changes needed — Vercel detects Next.js automatically. The project has no environment variables.
 
 ---
 
@@ -28,9 +32,12 @@ Node.js ≥ 18 required. No environment variables needed — all data is static.
 |---|---|
 | Framework | Next.js 16 (App Router) |
 | UI | React 19 |
-| Styling | Tailwind CSS v4 (PostCSS plugin, no config file) |
+| Styling | Tailwind CSS v4 (PostCSS plugin, no `tailwind.config.js`) |
+| Dark mode | Class-based (`.dark` on `<html>`), controlled by ThemeToggle + inline script |
+| Fonts | Geist Sans + Geist Mono via `next/font/google` |
+| Images | `next/image` with `fill` + `object-cover` for the profile photo |
 | Data | Static JS array in `lib/projects.js` |
-| Deployment target | Vercel (no changes needed) |
+| Favicon | `/public/favicon-round.png` (circular-cropped PNG, generated with `sharp`) |
 
 ---
 
@@ -39,24 +46,36 @@ Node.js ≥ 18 required. No environment variables needed — all data is static.
 ```
 /
 ├── app/
-│   ├── layout.js                  Root layout — loads Geist fonts, sets metadata
-│   ├── globals.css                Tailwind import, CSS variables, custom keyframes
-│   ├── page.js                    Home page — profile, bio, "what I'm building", CTA button
+│   ├── layout.js                  Root layout — fonts, metadata, ThemeToggle, FloatingOrbs,
+│   │                              inline dark-mode script
+│   ├── globals.css                Tailwind import, CSS variables, dark mode variant,
+│   │                              all @keyframes definitions
+│   ├── favicon.png                App Router auto-detected favicon (copy of favicon-round.png)
+│   ├── page.js                    Home page — profile, contact card, "What I'm building",
+│   │                              GitHub activity, CTA button, footer
 │   │
 │   ├── projects/
-│   │   ├── page.js                /projects listing — server shell + <ProjectsExplorer />
+│   │   ├── page.js                /projects — server shell + <ProjectsExplorer />
 │   │   └── [slug]/
-│   │       └── page.js            /projects/[slug] — static individual project pages
+│   │       └── page.js            /projects/[slug] — statically generated project pages
 │   │
 │   └── components/
 │       ├── IntroOverlay.js        Fullscreen intro animation (client component)
 │       ├── ProjectCard.js         Reusable card — link mode or button mode
-│       └── ProjectsExplorer.js    Split-panel explorer on /projects (client component)
+│       ├── ProjectsExplorer.js    Pill-based split-panel explorer on /projects (client)
+│       ├── GitHubActivity.js      GitHub recent repos feed (client component)
+│       ├── FloatingOrbs.js        Decorative background orbs, both themes (server component)
+│       ├── ThemeToggle.js         Fixed top-right sun/moon toggle (client component)
+│       └── QuoteFooter.js         Unused — kept in repo but not rendered anywhere
 │
 ├── lib/
 │   └── projects.js                Single source of truth for all project data
 │
-├── public/                        Static assets (favicons, SVGs)
+├── public/
+│   ├── profile.png                Profile photo (used in avatar)
+│   ├── favicon.png                Original square favicon
+│   └── favicon-round.png          Circular favicon (generated with sharp, used in metadata)
+│
 ├── next.config.mjs                Minimal Next.js config (no custom options)
 ├── postcss.config.mjs             Enables @tailwindcss/postcss
 ├── jsconfig.json                  Path alias: @/* → ./*
@@ -67,134 +86,184 @@ Node.js ≥ 18 required. No environment variables needed — all data is static.
 
 ## Features built
 
+### Theme system (`app/layout.js`, `app/components/ThemeToggle.js`, `app/globals.css`)
+- **Default: dark mode** — all visitors start in dark mode unless they've previously switched to light.
+- An inline `<script>` in `<head>` runs synchronously before first paint, reads `localStorage('theme')`, and adds `.dark` to `<html>` if the value is not `'light'`. This prevents any flash of the wrong theme.
+- `<html>` has `suppressHydrationWarning` to suppress React's class-mismatch warning caused by this script.
+- `ThemeToggle` is a fixed top-right circle button (z-50). It reads the current `.dark` class on mount and writes to `localStorage` on toggle.
+- Tailwind dark mode is class-based via `@custom-variant dark (&:where(.dark, .dark *))` in `globals.css` — **not** `prefers-color-scheme`.
+
+### Floating orbs background (`app/components/FloatingOrbs.js`)
+- Server component — purely decorative, no interactivity.
+- `fixed inset-0 z-[-1]` — sits below all page content. Page root divs are `bg-transparent` so the `body` background shows through and orbs are visible.
+- **Two separate orb sets**: `dark:hidden` for light mode (soft lavender/pink/indigo, opacity 0.25–0.35), `hidden dark:block` for dark mode (rich violet/indigo/purple, opacity 0.12–0.18).
+- Each orb uses `filter: blur(105px–130px)` and one of three keyframe animations (`orbFloat1`, `orbFloat2`, `orbFloat3`) with different durations (18–30s) and delays for organic, independent drift.
+- Keyframes are defined in `globals.css` — ±40–60px movement, `orbFloat3` also scales (0.94–1.08).
+
 ### Intro animation (`app/components/IntroOverlay.js`)
-- Plays once per browser session (tracked via `sessionStorage` key `introPlayed`)
-- Shows a fullscreen dark glass-morphism overlay with centred text: *"Hey! Here's the scoop on me."*
-- Total duration: exactly **4.5 seconds**
-- Six-phase sequence driven by `useState` + `setTimeout`:
+- Plays once per browser session — tracked via `sessionStorage` key `introPlayed`.
+- On return visits: `useEffect` reads `sessionStorage` immediately and sets phase to `done` (overlay never mounts visibly).
+- Fullscreen dark glass overlay (`bg-zinc-950/80 backdrop-blur-md`) centred over the page.
+- Text: *"Hey! Want a* ***glimpse*** *into* ***my work***?" — italic words styled `text-violet-400`.
+- Responsive font: `text-2xl sm:text-4xl lg:text-5xl`.
+- Total duration: exactly **4.5 seconds**.
 
-  | Phase | What happens | Duration |
+  | Phase | What happens | Timing |
   |---|---|---|
-  | `covered` | Overlay visible, text invisible, transitions disabled | 50ms |
-  | `enter` | Text fades in | 1.2s transition |
-  | `fadeText` | Text fades out | 1.2s transition |
-  | `fadeOverlay` | Whole overlay fades out | 0.8s transition |
-  | `done` | Component unmounts | — |
+  | `covered` | Overlay visible, transitions disabled | Initial state |
+  | `enter` | Text fades + lifts in | starts at 50ms, 1.2s transition |
+  | `fadeText` | Text fades out | starts at 2250ms, 1.2s transition |
+  | `fadeOverlay` | Whole overlay fades out | starts at 3450ms, 0.8s transition |
+  | `done` | Component returns null | at 4500ms |
 
-- **No SSR output** — the component is client-only, so no hydration mismatch is possible
-- On return visits: `useEffect` reads `sessionStorage`, sets phase to `done` immediately (overlay never visible)
+- **No SSR output** — client-only, so no hydration mismatch is possible.
+
+### Home page (`app/page.js`)
+- Profile section: circular avatar (`profile.png`) with violet/indigo/sky gradient ring, name, role subtitle, bio, GitHub link button.
+- Contact card (right of profile on large screens): "Let's Talk" heading, email link (`sanjay@creativelements.org`), LinkedIn link.
+- "What I'm building" card: prose paragraph about work at creativelements.
+- GitHub Activity section (see below).
+- "See my projects" CTA: gradient pill button with animated arrow, glow ring on hover.
+- Footer: "Updated March 2026 · creativelements".
+
+### GitHub Activity section (`app/components/GitHubActivity.js`)
+- Client component — fetches on mount from the GitHub REST API (public, no auth token).
+- Endpoint: `https://api.github.com/users/sanjay-creativelements/repos?sort=updated&per_page=5`
+- Shows 5 most-recently-updated repos: name (links to GitHub), description, language dot + colour, star count, relative time ("2h ago", "3 days ago", etc.).
+- Loading state: animated skeleton (5 pulse rows).
+- Error state: graceful "Unable to load activity." message.
+- Language colours are defined in a `LANGUAGE_COLORS` map inside the component.
 
 ### Project cards (`app/components/ProjectCard.js`)
 - Two rendering modes controlled by the `onClick` prop:
   - **Link mode** (default): renders a `<Link>` to `/projects/[slug]`
   - **Button mode** (`onClick` provided): renders a `<button>`, used by ProjectsExplorer
-- `contentVisible` prop (bool, default `true`) — controls description + tags opacity
-- `contentPresent` prop (bool, default `true`) — controls description + tags max-height
-- Both content props are used by ProjectsExplorer to animate content out before layout changes
-- Hover effect: card lifts (`-translate-y-1`), violet border appears, violet glow box-shadow
+- Props for animation (all default `true`, used only by ProjectsExplorer):
+  - `contentVisible` — controls opacity of description + tags
+  - `contentPresent` — controls maxHeight of description + tags (snaps instantly, never transitions)
+  - `titleVisible` — controls opacity of the card title separately
+- Hover: card lifts (`-translate-y-1`), violet border + violet glow box-shadow.
 
 ### Projects page split-panel (`app/components/ProjectsExplorer.js`)
-- **Default state**: 5 project cards in a responsive 2-column flex-wrap grid. Lone last card (odd count) is centred automatically.
-- **Click a card**: sequential animation opens a split view
-- **Left panel** narrows from 100% → 220px and becomes a sidebar title list
-- **Right panel** slides in with the full project detail (long description, tags, GitHub button)
-- Clicking a different title in the sidebar swaps the right panel (with a fresh slide-in animation via `key={selectedSlug}`)
-- **Back to grid** reverses the animation in sequence
+- **Default state**: cards in a `flex flex-wrap justify-center` 2-column grid with `cardReveal` stagger animation on mount.
+- **Click a card**: pill-based transition opens a detail view.
+- **Left sidebar**: pill buttons (one per project, 200px wide). Selected pill is violet. Clicking a different pill swaps the detail panel with a `fadeIn` animation.
+- **Right panel**: project title, `longDescription`, tags, GitHub button. Slides in with `slideInRight` on first open.
+- **Back to grid**: "Back to grid" button collapses pills in reverse stagger, grid re-mounts with `cardReveal`.
 
-#### Phase state machine (open sequence)
-```
-grid → hiding → sliding → detail
-```
-| Phase | What's animated | Duration |
-|---|---|---|
-| `hiding` | Description + tags fade out (opacity 1→0) | 0.3s |
-| `sliding` | Height collapses (instant, invisible), panel slides left | 0.65s |
-| `detail` | Sidebar fades in, detail panel slides in from right | CSS animations |
+  **Open sequence:** `grid → hiding-content → forming-pills → detail`
 
-#### Phase state machine (close sequence)
-```
-detail → hiding-detail → expanding → showing-content → grid
-```
-| Phase | What's animated | Duration |
-|---|---|---|
-| `hiding-detail` | Detail panel fades out | 0.3s |
-| `expanding` | Panel slides right, cards replace sidebar | 0.65s |
-| `showing-content` | Height restores (instant), content fades in | 0.3s |
+  | Phase | What's animated | Timing |
+  |---|---|---|
+  | `hiding-content` | All card content + titles fade to opacity 0 | 300ms |
+  | `forming-pills` | Layout snaps to sidebar, pills grow in (staggered, `pillGrow`) | 300ms |
+  | `detail` | Detail panel slides in from right | CSS animation |
 
-**Critical invariant:** `maxHeight` always snaps instantly (no CSS transition on it). It only changes while `opacity` is already 0, so the snap is invisible and text never visibly reflows.
+  **Close sequence:** `detail → hiding-detail → shrinking-pills → grid`
+
+  | Phase | What's animated | Timing |
+  |---|---|---|
+  | `hiding-detail` | Detail panel fades to opacity 0 | 300ms |
+  | `shrinking-pills` | Pills shrink in reverse stagger (`pillShrink`) | 300ms |
+  | `grid` | Cards re-mount with `cardReveal` stagger | CSS animation |
+
+  **Critical invariant:** `maxHeight` on cards always snaps instantly (no CSS transition). It only changes while opacity is already 0 so the snap is invisible and text never reflows.
 
 ### Individual project pages (`app/projects/[slug]/page.js`)
-- Statically generated at build time via `generateStaticParams()`
-- `params` is awaited (`async` function) — required in Next.js 15+
-- Shows: project title, `longDescription`, tags, "Click to see my work :)" GitHub button, back arrow
-- 404 via `notFound()` for unknown slugs
+- Statically generated at build time via `generateStaticParams()`.
+- `params` is awaited — required in Next.js 15+ (`async` function, `await params`).
+- Shows: title, `longDescription`, tags, GitHub button ("Click to see my work :)"), back arrow to dashboard.
+- 404 via `notFound()` for unknown slugs.
+- `generateMetadata` also awaits `params` and returns per-project `<title>`.
 
-### Home page (`app/page.js`)
-- Profile: avatar (initials "SW"), name, role badge, short bio, GitHub link button
-- "What I'm building" section: prose paragraph describing the work at Creative Elements
-- "See my projects" CTA button: gradient pill with arrow icon, glow + scale hover effect
+### Favicon (`app/favicon.png`, `public/favicon-round.png`)
+- The favicon is a circular crop of `public/favicon.png`, generated once with `sharp` (200×200, SVG circle mask, `dest-in` blend).
+- The round PNG is saved as `public/favicon-round.png`.
+- `app/favicon.png` is a copy of the round version — Next.js App Router auto-detects and serves any `favicon.*` in the `app/` directory.
+- `metadata.icons` in `layout.js` explicitly declares both `icon` and `apple` pointing to `/favicon-round.png`.
+- `app/favicon.ico` has been deleted — if it existed it would take priority over everything else.
 
 ---
 
 ## Color theme
 
-All accent colors derive from the same violet/indigo/sky palette. Never introduce a new accent color — extend this set only.
+All accent colors derive from the violet/indigo/sky palette. **Never introduce a new accent color.**
 
 | Token | Value | Used for |
 |---|---|---|
-| `from-violet-500 via-indigo-500 to-sky-500` | gradient | Top accent bar, avatar gradient |
-| `from-violet-500 to-indigo-600` | gradient | SW avatar background |
+| `from-violet-500 via-indigo-500 to-sky-500` | gradient | Top accent bar (all pages) |
+| `from-violet-500 via-indigo-500 to-sky-500` | gradient | Avatar ring |
 | `from-violet-600 to-indigo-600` | gradient | CTA button background |
-| `violet-400` / `violet-500` | solid | Card hover border (light / dark) |
+| `violet-400` / `violet-500` | solid | Card hover border (dark / light), section labels, sidebar selected ring |
 | `indigo-600` / `indigo-400` | solid | Role subtitle text (light / dark) |
-| `violet-500` / `violet-400` | solid | Section label text |
+| `violet-500` / `violet-400` | solid | Section heading labels |
 | `violet-950/80` | semi-transparent | Intro overlay background |
+| `zinc-950/80` | solid | Intro overlay dark glass layer |
 
 ---
 
 ## Conventions
 
 ### Tailwind-only styling
-All styling uses Tailwind utility classes. **Do not add custom CSS classes** except for `@keyframes` in `globals.css` (which Tailwind can't express). Inline `style` props are acceptable only for values that change at runtime (animation phases, dynamic widths).
+All styling uses Tailwind utility classes. Do not add custom CSS classes except for `@keyframes` in `globals.css` (Tailwind can't express these). Inline `style` props are acceptable only for values that change at runtime (animation phases, dynamic widths).
+
+### Dark mode
+Use `dark:` Tailwind variants — not media queries. The variant is class-based via `@custom-variant dark (&:where(.dark, .dark *))`. Any new component that needs dark styles must use `dark:` prefixed classes.
 
 ### App Router structure
 - Pages in `app/` are **server components by default**. Add `"use client"` only when you need `useState`, `useEffect`, browser APIs, or event handlers.
-- `metadata` exports belong in server components. If a page needs both metadata and client-side state, keep the server component as a thin shell and extract the interactive part to a `app/components/*.js` client component.
-- Dynamic route params (`params`) must be **awaited** — they are Promises in Next.js 15+.
+- `metadata` exports belong in server components. If a page needs both metadata and client state, keep the server component as a thin shell and extract interactivity to a component in `app/components/`.
+- Dynamic route `params` must be **awaited** — they are Promises in Next.js 15+.
 
 ### Animation approach
-- Sequential animations use `setTimeout` chains managed in a `useRef` array. Always clear timers on unmount and when re-triggering.
-- CSS `transition` and `animation` handle the actual interpolation. JavaScript only changes state at the right moments.
-- Never animate `height` directly (janky, requires explicit values). Use `maxHeight` snap (instant, invisible) + `opacity` transition instead.
-- `@keyframes` lives in `globals.css`. Currently defined: `slideInRight`, `fadeIn`.
+- Sequential animations use `setTimeout` chains tracked in a `useRef` array. Always clear all timers on unmount and before re-triggering (`clearTimers()` pattern in ProjectsExplorer).
+- CSS `transition` and `animation` do the actual interpolation. JS only sets state at the right moments.
+- Never animate `height` directly. Use `maxHeight` snap (instant, invisible, no CSS transition declared) + `opacity` transition instead.
+- All `@keyframes` live in `globals.css`: `slideInRight`, `fadeIn`, `pillGrow`, `pillShrink`, `cardReveal`, `orbFloat1`, `orbFloat2`, `orbFloat3`.
 
 ### Project data
-All project content lives in **`lib/projects.js`** as a plain exported array. Both the `/projects` listing and the `/projects/[slug]` pages import from here — never duplicate data. Each project needs: `slug`, `title`, `description` (short, for cards), `longDescription` (50+ words, for detail view), `tags`, `githubUrl`.
+All project content lives in **`lib/projects.js`** as a plain exported array. Both the `/projects` listing and `/projects/[slug]` pages import from there — never duplicate data.
+
+Each project object requires: `slug`, `title`, `description` (short, for cards), `longDescription` (50+ words, for detail view), `tags` (string array), `githubUrl`.
 
 ### Path aliases
 Use `@/` for all internal imports (e.g. `@/lib/projects`, `@/app/components/ProjectCard`). Relative imports are not used.
+
+### Page backgrounds
+Every page root div uses `min-h-screen font-sans` with **no background color class**. The `body` CSS variable background (`--background`) shows through, and `FloatingOrbs` (at `z-[-1]`) is visible between the body color and page content. Do not add `bg-white`, `bg-zinc-50`, or any solid background to page root divs — it will hide the orbs.
 
 ---
 
 ## Known quirks and things to be careful about
 
-### Intro overlay + hydration
-The `IntroOverlay` component is **client-only** (no SSR output). This is intentional. A previous version used an inline `<script>` in `layout.js` to add a class to `<html>` before first paint, which caused a hydration mismatch (`className` on the `<html>` element differed between server and client). The current approach avoids this entirely — the overlay is not rendered server-side, so there is nothing for the hydration differ to compare. Do not re-introduce any `<html>` class manipulation.
+### Dark mode default + hydration
+The inline `<script>` in `layout.js` applies `.dark` to `<html>` synchronously before React hydrates. This means the `className` on `<html>` differs between the server render (no class) and the first client render (has `.dark`). `suppressHydrationWarning` on `<html>` suppresses React's warning about this. **Do not remove `suppressHydrationWarning`.**
+
+The current inline script: apply `.dark` unless `localStorage.getItem('theme') === 'light'`. This means dark is the default for all new visitors regardless of system preference.
+
+### `app/favicon.ico` must stay deleted
+If `app/favicon.ico` is ever recreated, Next.js will serve it as the favicon and completely ignore the `metadata.icons` setting and `app/favicon.png`. Keep it deleted.
 
 ### `params` must be awaited in Next.js 15+
-In `app/projects/[slug]/page.js`, both `generateMetadata` and the default export are `async` functions that `await params` before destructuring `slug`. If you add new dynamic routes, follow the same pattern or you'll get a runtime error.
+In `app/projects/[slug]/page.js`, both `generateMetadata` and the default export are `async` and `await params` before destructuring `slug`. Follow this pattern for any new dynamic routes.
 
 ### Tailwind v4 — no `tailwind.config.js`
-This project uses Tailwind CSS v4, which is configured via `postcss.config.mjs` and the `@import "tailwindcss"` directive in `globals.css`. There is no `tailwind.config.js` file — that's intentional. Arbitrary values like `w-[calc(50%-0.625rem)]` and `shadow-[...]` work without any config changes.
+Tailwind v4 is configured via `postcss.config.mjs` and the `@import "tailwindcss"` directive in `globals.css`. There is no `tailwind.config.js` — that's intentional. Arbitrary values (`w-[calc(50%-0.625rem)]`, `shadow-[...]`, `opacity-[0.18]`) work without any config.
 
 ### Card grid centering (odd last card)
-The project grid uses `flex flex-wrap justify-center` with each card at `w-full sm:w-[calc(50%-0.625rem)]`. This automatically centres the last card when the total count is odd. If you change the layout to CSS grid (`grid-cols-2`), you will lose this behaviour and need to handle the odd-card case manually.
+The project grid uses `flex flex-wrap justify-center` with each card at `w-full sm:w-[calc(50%-0.625rem)]`. This automatically centres the lone last card when the total count is odd. If you change the layout to CSS `grid-cols-2`, you lose this behaviour and must handle it manually.
 
-### `contentVisible` / `contentPresent` props on ProjectCard
-These two props exist specifically to support the ProjectsExplorer animation. When `ProjectCard` is used outside the explorer (e.g. on the `/projects/[slug]` page or any future listing), both default to `true` and have no effect. Do not remove them — the explorer depends on them.
+### `contentVisible` / `contentPresent` / `titleVisible` props on ProjectCard
+These props exist specifically for ProjectsExplorer's animation. When `ProjectCard` is used elsewhere (e.g. `[slug]` page), all three default to `true` and have no visible effect. Do not remove them.
 
 ### ProjectsExplorer phase guards
-`handleCardClick` is guarded with `if (phase !== 'grid') return` and `handleClose` with `if (phase !== 'detail') return`. This prevents mid-animation double-clicks from corrupting the state machine. Do not remove these guards.
+`handleCardClick` is guarded with `if (phase !== 'grid') return` and `handleClose` with `if (phase !== 'detail') return`. These prevent mid-animation double-clicks from corrupting the state machine. Do not remove them.
 
-### sessionStorage and SSR
-`sessionStorage` is only available in the browser. Both `IntroOverlay` and any code that reads `introPlayed` must do so inside `useEffect` (or an equivalent client-only context), never at module or render scope.
+### `sessionStorage` and SSR
+`sessionStorage` is browser-only. All reads/writes must happen inside `useEffect`, never at module or render scope.
+
+### GitHub API rate limiting
+`GitHubActivity` fetches from the unauthenticated GitHub API. The limit is 60 requests/hour per IP. In development with hot-reloading this can be hit quickly. If you see the "Unable to load activity." error message, wait a minute or add a `GITHUB_TOKEN` environment variable and pass it as a header (not currently implemented).
+
+### `QuoteFooter.js` is unused
+`app/components/QuoteFooter.js` exists in the repo but is not imported or rendered anywhere. It was built then removed. Leave it as-is or delete it — it has no effect on the site.
