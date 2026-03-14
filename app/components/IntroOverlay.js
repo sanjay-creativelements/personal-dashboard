@@ -64,9 +64,12 @@ export default function IntroOverlay() {
             ? "opacity 1.2s ease, transform 1.2s ease"
             : "none",
         }}
-        className="relative z-10 px-6 text-center text-4xl font-semibold tracking-tight text-white sm:text-5xl"
+        className="relative z-10 px-6 text-center text-2xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl"
       >
-        Hey! Here&apos;s the scoop on me.
+        Hey! Want a{" "}
+        <em className="not-italic italic text-violet-400">glimpse</em>{" "}
+        into{" "}
+        <em className="not-italic italic text-violet-400">my work</em>?
       </p>
     </div>
   );

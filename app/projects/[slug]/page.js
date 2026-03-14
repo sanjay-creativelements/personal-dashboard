@@ -54,7 +54,7 @@ export default async function ProjectPage({ params }) {
   const { title, longDescription, tags, githubUrl } = project;
 
   return (
-    <div className="min-h-screen bg-zinc-50 font-sans dark:bg-zinc-950">
+    <div className="min-h-screen font-sans">
       {/* Top accent line */}
       <div className="h-1 w-full bg-gradient-to-r from-violet-500 via-indigo-500 to-sky-500" />
 
@@ -69,7 +69,7 @@ export default async function ProjectPage({ params }) {
         </Link>
 
         {/* Project content */}
-        <article className="mt-8 rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <article className="mt-8 rounded-2xl border-2 border-zinc-300 bg-white p-8 shadow-sm dark:border dark:border-zinc-800 dark:bg-zinc-900">
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
             {title}
           </h1>

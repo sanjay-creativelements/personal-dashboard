@@ -27,19 +27,23 @@ function ArrowLeftIcon() {
 
 export default function ProjectsPage() {
   return (
-    <div className="min-h-screen bg-zinc-50 font-sans dark:bg-zinc-950">
+    <div className="min-h-screen font-sans">
       <div className="h-1 w-full bg-gradient-to-r from-violet-500 via-indigo-500 to-sky-500" />
 
-      <main className="mx-auto max-w-4xl px-6 py-16 sm:py-24">
+      <main className="mx-auto max-w-4xl px-6 pb-16 pt-8 sm:pb-24 sm:pt-12">
         <Link
           href="/"
-          className="mb-12 inline-flex items-center gap-2 text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
+          className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
         >
           <ArrowLeftIcon />
           Back to dashboard
         </Link>
 
-        <div className="mb-12 mt-8 flex items-center gap-4">
+        <h1 className="mb-8 text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+          Projects
+        </h1>
+
+        <div className="mb-12 flex items-center gap-4">
           <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
             Built this week
           </h1>

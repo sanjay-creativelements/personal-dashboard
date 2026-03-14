@@ -4,58 +4,26 @@ import { useState, useRef, useEffect } from "react";
 import { projects } from "@/lib/projects";
 import ProjectCard from "@/app/components/ProjectCard";
 
-// ─── Phase state machine ──────────────────────────────────────────────────────
+// ── Phase state machine ────────────────────────────────────────────────────────
 //
-// OPEN sequence:
-//   grid → hiding → sliding → detail
-//   (fade content out) (collapse + slide left) (show detail panel)
+// OPEN:   grid → hiding-content → forming-pills → detail
+// CLOSE:  detail → hiding-detail → shrinking-pills → grid
 //
-// CLOSE sequence:
-//   detail → hiding-detail → expanding → showing-content → grid
-//   (fade detail out) (expand right)  (restore + fade content in)
+// The layout swap (grid ↔ sidebar) always happens at the hiding→forming
+// boundary — exactly when all card content is at opacity 0 — so text never
+// visibly reflows between the two layouts.
 //
-// The key invariant: maxHeight snaps (no transition) only while opacity is
-// already 0, so the snap is invisible and text never visibly reflows.
+// Pills grow/shrink via a height keyframe animation on an overflow:hidden
+// wrapper. The button inside is h-10 (40px), matching the keyframe target.
+// Stagger is applied so pills cascade in/out one after another.
 // ─────────────────────────────────────────────────────────────────────────────
 
-function deriveState(phase) {
-  // Content opacity — drives fade in/out of descriptions + tags
-  const contentVisible = phase === "grid" || phase === "showing-content";
+const PILL_DURATION = 300; // ms — per-pill grow/shrink duration
+const PILL_STAGGER  =  45; // ms — delay between consecutive pills
 
-  // Content presence — drives maxHeight (instant snap, always invisible)
-  // True while the content needs to take up space (during fade or fully visible)
-  const contentPresent =
-    phase === "grid" || phase === "hiding" || phase === "showing-content";
-
-  // Left panel width
-  const panelNarrow =
-    phase === "sliding" || phase === "detail" || phase === "hiding-detail";
-
-  // Enable width transition only during the actual slide phases
-  const panelTransition =
-    phase === "sliding" || phase === "expanding"
-      ? "width 0.65s cubic-bezier(0.4, 0, 0.2, 1)"
-      : "none";
-
-  // Whether to show the sidebar title list vs the card grid
-  const showSidebar = phase === "detail" || phase === "hiding-detail";
-
-  // Whether the right detail panel is mounted
-  const showDetail = phase === "detail" || phase === "hiding-detail";
-
-  // Whether the detail panel is fading out
-  const detailFadingOut = phase === "hiding-detail";
-
-  return {
-    contentVisible,
-    contentPresent,
-    panelNarrow,
-    panelTransition,
-    showSidebar,
-    showDetail,
-    detailFadingOut,
-  };
-}
+// Total time for all pills to finish: PILL_DURATION + (n-1) * PILL_STAGGER
+// At 350ms after "forming-pills" starts the detail panel slides in, which
+// intentionally overlaps the last pill still forming for a cascade feel.
 
 function GitHubIcon() {
   return (
@@ -93,6 +61,9 @@ export default function ProjectsExplorer() {
   const [phase, setPhase] = useState("grid");
   const [selectedSlug, setSelectedSlug] = useState(null);
   const timers = useRef([]);
+  // Tracks which animation the detail panel should use on mount.
+  // "slideInRight" on first open; "fadeIn" when switching projects via sidebar.
+  const detailAnim = useRef("slideInRight 0.3s ease both");
 
   useEffect(() => {
     const ts = timers.current;
@@ -112,151 +83,175 @@ export default function ProjectsExplorer() {
   function handleCardClick(slug) {
     if (phase !== "grid") return;
     clearTimers();
+    detailAnim.current = "slideInRight 0.3s ease both";
     setSelectedSlug(slug);
-    setPhase("hiding");                          // step 1: fade content out (0.3s)
-    schedule(() => setPhase("sliding"), 300);    // step 2: collapse + slide (0.65s)
-    schedule(() => setPhase("detail"),  950);    // step 3: show detail panel
+    setPhase("hiding-content");                       // 1. fade out all card content
+    schedule(() => setPhase("forming-pills"), 300);   // 2. layout snaps, pills grow in
+    schedule(() => setPhase("detail"),        650);   // 3. detail slides in (overlaps last pill)
   }
 
   // ── Close ─────────────────────────────────────────────────────────────────
   function handleClose() {
     if (phase !== "detail") return;
     clearTimers();
-    setPhase("hiding-detail");                         // step 1: fade detail out (0.3s)
-    schedule(() => setPhase("expanding"),       330);  // step 2: expand panel (0.65s)
-    schedule(() => setPhase("showing-content"), 980);  // step 3: restore + fade content in (0.3s)
+    setPhase("hiding-detail");                        // 1. right panel fades out
+    schedule(() => setPhase("shrinking-pills"), 300); // 2. pills collapse
     schedule(() => {
       setSelectedSlug(null);
-      setPhase("grid");
-    }, 1280);
+      setPhase("grid");                               // 3. grid re-mounts, cards reveal with stagger
+    }, 650);
   }
 
-  // ── Switch project (sidebar click — no layout transition needed) ──────────
+  // ── Switch project (sidebar click) ────────────────────────────────────────
   function handleSidebarSelect(slug) {
     if (phase !== "detail") return;
+    detailAnim.current = "fadeIn 0.3s ease both";
     setSelectedSlug(slug);
   }
 
-  const {
-    contentVisible,
-    contentPresent,
-    panelNarrow,
-    panelTransition,
-    showSidebar,
-    showDetail,
-    detailFadingOut,
-  } = deriveState(phase);
+  // ── Derived visibility ────────────────────────────────────────────────────
+  const showGrid    = phase === "grid" || phase === "hiding-content";
+  const showSidebar = phase === "forming-pills" || phase === "detail" ||
+                      phase === "hiding-detail"  || phase === "shrinking-pills";
+  const showDetail  = phase === "detail" || phase === "hiding-detail";
 
   const selected = projects.find((p) => p.slug === selectedSlug) ?? null;
 
   return (
-    <div
-      style={{
-        display: "flex",
-        gap: showDetail ? "1.5rem" : "0",
-        alignItems: "flex-start",
-      }}
-    >
-      {/* ── Left panel ──────────────────────────────────────────────────── */}
-      <div
-        style={{
-          flexShrink: 0,
-          width: panelNarrow ? "220px" : "100%",
-          overflow: "hidden",
-          transition: panelTransition,
-        }}
-      >
-        {showSidebar ? (
-          <nav
-            style={{ animation: "fadeIn 0.3s ease both" }}
-            className="flex flex-col"
-          >
-            <p className="mb-3 px-3 text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-600">
-              Projects
-            </p>
+    <div>
+      {/* ── Card grid ─────────────────────────────────────────────────────── */}
+      {showGrid && (
+        <div className="flex flex-wrap justify-center gap-5">
+          {projects.map((p, i) => (
+            <div
+              key={p.slug}
+              className="w-full sm:w-[calc(50%-0.625rem)]"
+              style={{
+                // Cards reveal with stagger on every fresh mount of the grid —
+                // both on initial page load and when returning from detail view.
+                animation: `cardReveal 280ms ease both`,
+                animationDelay: `${i * 50}ms`,
+              }}
+            >
+              <ProjectCard
+                {...p}
+                onClick={() => handleCardClick(p.slug)}
+                // Fade title + content together during the hiding-content phase.
+                // contentPresent stays true so card height doesn't collapse
+                // before the grid unmounts.
+                contentVisible={phase !== "hiding-content"}
+                titleVisible={phase !== "hiding-content"}
+                contentPresent={true}
+              />
+            </div>
+          ))}
+        </div>
+      )}
 
-            {projects.map((p) => (
+      {/* ── Sidebar + detail panel ────────────────────────────────────────── */}
+      {showSidebar && (
+        <div className="flex items-start gap-6">
+
+          {/* Pill sidebar ── each pill lives inside an overflow:hidden wrapper
+              that the pillGrow / pillShrink keyframes animate height on.
+              The button itself is always h-10 (40px), matching keyframe targets. */}
+          <nav className="flex w-[200px] shrink-0 flex-col">
+            {projects.map((p, i) => {
+              const isSelected  = p.slug === selectedSlug;
+              const isGrowing   = phase === "forming-pills";
+              const isShrinking = phase === "shrinking-pills";
+              // Reverse stagger for collapse: last pill collapses first
+              const reverseIdx  = projects.length - 1 - i;
+
+              const wrapperStyle = {
+                marginBottom: "6px",
+                ...(isGrowing && {
+                  overflow: "hidden",
+                  animation: `pillGrow ${PILL_DURATION}ms ease both`,
+                  animationDelay: `${i * PILL_STAGGER}ms`,
+                }),
+                ...(isShrinking && {
+                  overflow: "hidden",
+                  animation: `pillShrink ${PILL_DURATION}ms ease both`,
+                  animationDelay: `${reverseIdx * PILL_STAGGER}ms`,
+                }),
+              };
+
+              return (
+                <div key={p.slug} style={wrapperStyle}>
+                  <button
+                    onClick={() => handleSidebarSelect(p.slug)}
+                    disabled={phase !== "detail"}
+                    className={`h-10 w-full truncate rounded-lg px-3 text-left text-sm font-medium transition-colors duration-200 disabled:pointer-events-none ${
+                      isSelected
+                        ? "bg-violet-100 text-violet-700 ring-1 ring-violet-400/50 dark:bg-violet-950/50 dark:text-violet-300 dark:ring-violet-500/40"
+                        : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200 hover:text-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-100"
+                    }`}
+                  >
+                    {p.title}
+                  </button>
+                </div>
+              );
+            })}
+
+            {/* Back to grid — only shown when there's something to close */}
+            {(phase === "detail" || phase === "hiding-detail") && (
               <button
-                key={p.slug}
-                onClick={() => handleSidebarSelect(p.slug)}
-                className={`w-full rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors duration-200 ${
-                  selectedSlug === p.slug
-                    ? "bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300"
-                    : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-                }`}
+                onClick={handleClose}
+                className="mt-4 flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-zinc-400 transition-colors duration-200 hover:text-zinc-700 dark:text-zinc-600 dark:hover:text-zinc-300"
               >
-                {p.title}
+                <ArrowLeftIcon />
+                Back to grid
               </button>
-            ))}
-
-            <button
-              onClick={handleClose}
-              className="mt-6 flex items-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-medium text-zinc-400 transition-colors duration-200 hover:text-zinc-700 dark:text-zinc-600 dark:hover:text-zinc-300"
-            >
-              <ArrowLeftIcon />
-              Back to grid
-            </button>
+            )}
           </nav>
-        ) : (
-          <div className="flex flex-wrap justify-center gap-5">
-            {projects.map((p) => (
-              <div key={p.slug} className="w-full sm:w-[calc(50%-0.625rem)]">
-                <ProjectCard
-                  {...p}
-                  contentVisible={contentVisible}
-                  contentPresent={contentPresent}
-                  onClick={() => handleCardClick(p.slug)}
-                />
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
 
-      {/* ── Right detail panel ──────────────────────────────────────────── */}
-      {showDetail && selected && (
-        <article
-          key={selectedSlug}
-          style={{
-            opacity: detailFadingOut ? 0 : 1,
-            transition: detailFadingOut ? "opacity 0.3s ease" : "none",
-            animation: detailFadingOut
-              ? "none"
-              : "slideInRight 0.5s cubic-bezier(0.4, 0, 0.2, 1) both",
-          }}
-          className="min-w-0 flex-1 rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
-        >
-          <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {selected.title}
-          </h2>
-
-          <p className="mt-4 text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
-            {selected.longDescription}
-          </p>
-
-          <div className="mt-6 flex flex-wrap gap-2">
-            {selected.tags.map((tag) => (
-              <span
-                key={tag}
-                className="rounded-md bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-
-          <div className="mt-8 border-t border-zinc-100 pt-8 dark:border-zinc-800">
-            <a
-              href={selected.githubUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-xl bg-zinc-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+          {/* Detail panel ── key={selectedSlug} forces a re-mount on project
+              switch so the entry animation fires fresh each time.
+              detailAnim.current controls slideInRight vs fadeIn. */}
+          {showDetail && selected && (
+            <article
+              key={selectedSlug}
+              style={{
+                opacity:    phase === "hiding-detail" ? 0 : undefined,
+                transition: phase === "hiding-detail" ? "opacity 0.3s ease" : undefined,
+                animation:  phase === "detail" ? detailAnim.current : "none",
+              }}
+              className="min-w-0 flex-1 rounded-2xl border-2 border-zinc-300 bg-white p-8 shadow-sm dark:border dark:border-zinc-800 dark:bg-zinc-900"
             >
-              <GitHubIcon />
-              Click to see my work :)
-            </a>
-          </div>
-        </article>
+              <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+                {selected.title}
+              </h2>
+
+              <p className="mt-4 text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
+                {selected.longDescription}
+              </p>
+
+              <div className="mt-6 flex flex-wrap gap-2">
+                {selected.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-md bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+
+              <div className="mt-8 border-t border-zinc-100 pt-8 dark:border-zinc-800">
+                <a
+                  href={selected.githubUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-xl bg-zinc-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                >
+                  <GitHubIcon />
+                  Click to see my work :)
+                </a>
+              </div>
+            </article>
+          )}
+        </div>
       )}
     </div>
   );
