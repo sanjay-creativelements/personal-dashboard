@@ -102,7 +102,7 @@ export default function Dashboard() {
                   </p>
                 </div>
 
-                <p className="max-w-xl text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
+                <p className="max-w-xl text-base leading-relaxed text-justify text-zinc-600 dark:text-zinc-400">
                   Learning by building and shipping real things.
                 </p>
 
@@ -157,7 +157,7 @@ export default function Dashboard() {
             <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-violet-500 dark:text-violet-400">
               What I&apos;m building
             </h2>
-            <p className="text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
+            <p className="text-base leading-relaxed text-justify text-zinc-600 dark:text-zinc-400">
               At creativelements, the software I help build actually gets
               used — by real clients, in production, with real stakes attached.
               I contribute across the stack, from shaping interfaces to writing

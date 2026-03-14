@@ -6,24 +6,18 @@ import ProjectCard from "@/app/components/ProjectCard";
 
 // ── Phase state machine ────────────────────────────────────────────────────────
 //
-// OPEN:   grid → hiding-content → forming-pills → detail
-// CLOSE:  detail → hiding-detail → shrinking-pills → grid
+// DESKTOP OPEN:   grid → hiding-content → forming-pills → detail
+// DESKTOP CLOSE:  detail → hiding-detail → shrinking-pills → grid
 //
-// The layout swap (grid ↔ sidebar) always happens at the hiding→forming
-// boundary — exactly when all card content is at opacity 0 — so text never
-// visibly reflows between the two layouts.
+// MOBILE OPEN:    grid → detail          (no pill animation)
+// MOBILE CLOSE:   detail → grid          (no pill animation)
 //
-// Pills grow/shrink via a height keyframe animation on an overflow:hidden
-// wrapper. The button inside is h-10 (40px), matching the keyframe target.
-// Stagger is applied so pills cascade in/out one after another.
+// On mobile the sidebar nav is CSS-hidden (hidden md:flex). The detail panel
+// renders full-width and includes a "← Back" button (md:hidden) at the top.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const PILL_DURATION = 300; // ms — per-pill grow/shrink duration
 const PILL_STAGGER  =  45; // ms — delay between consecutive pills
-
-// Total time for all pills to finish: PILL_DURATION + (n-1) * PILL_STAGGER
-// At 350ms after "forming-pills" starts the detail panel slides in, which
-// intentionally overlaps the last pill still forming for a cascade feel.
 
 function GitHubIcon() {
   return (
@@ -39,13 +33,13 @@ function GitHubIcon() {
   );
 }
 
-function ArrowLeftIcon() {
+function ArrowLeftIcon({ className = "h-3.5 w-3.5" }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 20 20"
       fill="currentColor"
-      className="h-3.5 w-3.5"
+      className={className}
       aria-hidden="true"
     >
       <path
@@ -60,14 +54,24 @@ function ArrowLeftIcon() {
 export default function ProjectsExplorer() {
   const [phase, setPhase] = useState("grid");
   const [selectedSlug, setSelectedSlug] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
   const timers = useRef([]);
-  // Tracks which animation the detail panel should use on mount.
-  // "slideInRight" on first open; "fadeIn" when switching projects via sidebar.
+  // "slideInRight" on first open; "fadeIn" when switching via sidebar.
   const detailAnim = useRef("slideInRight 0.3s ease both");
 
   useEffect(() => {
     const ts = timers.current;
     return () => ts.forEach(clearTimeout);
+  }, []);
+
+  // Track mobile breakpoint so handlers can skip the pill animation.
+  // md breakpoint = 768px, matching Tailwind's default.
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    setIsMobile(mq.matches);
+    const onChange = (e) => setIsMobile(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
   }, []);
 
   function schedule(fn, delay) {
@@ -83,22 +87,37 @@ export default function ProjectsExplorer() {
   function handleCardClick(slug) {
     if (phase !== "grid") return;
     clearTimers();
-    detailAnim.current = "slideInRight 0.3s ease both";
     setSelectedSlug(slug);
+
+    // Mobile: skip pill animation, jump straight to detail.
+    if (isMobile) {
+      setPhase("detail");
+      return;
+    }
+
+    detailAnim.current = "slideInRight 0.3s ease both";
     setPhase("hiding-content");                       // 1. fade out all card content
     schedule(() => setPhase("forming-pills"), 300);   // 2. layout snaps, pills grow in
-    schedule(() => setPhase("detail"),        650);   // 3. detail slides in (overlaps last pill)
+    schedule(() => setPhase("detail"),        650);   // 3. detail slides in
   }
 
   // ── Close ─────────────────────────────────────────────────────────────────
   function handleClose() {
     if (phase !== "detail") return;
     clearTimers();
+
+    // Mobile: skip pill animation, snap straight back to grid.
+    if (isMobile) {
+      setSelectedSlug(null);
+      setPhase("grid");
+      return;
+    }
+
     setPhase("hiding-detail");                        // 1. right panel fades out
     schedule(() => setPhase("shrinking-pills"), 300); // 2. pills collapse
     schedule(() => {
       setSelectedSlug(null);
-      setPhase("grid");                               // 3. grid re-mounts, cards reveal with stagger
+      setPhase("grid");                               // 3. grid re-mounts with cardReveal
     }, 650);
   }
 
@@ -127,8 +146,6 @@ export default function ProjectsExplorer() {
               key={p.slug}
               className="w-full sm:w-[calc(50%-0.625rem)]"
               style={{
-                // Cards reveal with stagger on every fresh mount of the grid —
-                // both on initial page load and when returning from detail view.
                 animation: `cardReveal 280ms ease both`,
                 animationDelay: `${i * 50}ms`,
               }}
@@ -136,9 +153,6 @@ export default function ProjectsExplorer() {
               <ProjectCard
                 {...p}
                 onClick={() => handleCardClick(p.slug)}
-                // Fade title + content together during the hiding-content phase.
-                // contentPresent stays true so card height doesn't collapse
-                // before the grid unmounts.
                 contentVisible={phase !== "hiding-content"}
                 titleVisible={phase !== "hiding-content"}
                 contentPresent={true}
@@ -152,15 +166,12 @@ export default function ProjectsExplorer() {
       {showSidebar && (
         <div className="flex items-start gap-6">
 
-          {/* Pill sidebar ── each pill lives inside an overflow:hidden wrapper
-              that the pillGrow / pillShrink keyframes animate height on.
-              The button itself is always h-10 (40px), matching keyframe targets. */}
-          <nav className="flex w-[200px] shrink-0 flex-col">
+          {/* Pill sidebar — hidden on mobile, visible on md+ */}
+          <nav className="hidden w-[200px] shrink-0 flex-col md:flex">
             {projects.map((p, i) => {
               const isSelected  = p.slug === selectedSlug;
               const isGrowing   = phase === "forming-pills";
               const isShrinking = phase === "shrinking-pills";
-              // Reverse stagger for collapse: last pill collapses first
               const reverseIdx  = projects.length - 1 - i;
 
               const wrapperStyle = {
@@ -194,7 +205,7 @@ export default function ProjectsExplorer() {
               );
             })}
 
-            {/* Back to grid — only shown when there's something to close */}
+            {/* Desktop back button — inside the sidebar, hidden on mobile */}
             {(phase === "detail" || phase === "hiding-detail") && (
               <button
                 onClick={handleClose}
@@ -206,9 +217,7 @@ export default function ProjectsExplorer() {
             )}
           </nav>
 
-          {/* Detail panel ── key={selectedSlug} forces a re-mount on project
-              switch so the entry animation fires fresh each time.
-              detailAnim.current controls slideInRight vs fadeIn. */}
+          {/* Detail panel */}
           {showDetail && selected && (
             <article
               key={selectedSlug}
@@ -217,13 +226,22 @@ export default function ProjectsExplorer() {
                 transition: phase === "hiding-detail" ? "opacity 0.3s ease" : undefined,
                 animation:  phase === "detail" ? detailAnim.current : "none",
               }}
-              className="min-w-0 flex-1 rounded-2xl border-2 border-zinc-300 bg-white p-8 shadow-sm dark:border dark:border-zinc-800 dark:bg-zinc-900"
+              className="min-w-0 flex-1 rounded-2xl border-2 border-zinc-300 bg-white p-6 shadow-sm sm:p-8 dark:border dark:border-zinc-800 dark:bg-zinc-900"
             >
+              {/* Mobile back button — hidden on md+ where the sidebar handles navigation */}
+              <button
+                onClick={handleClose}
+                className="mb-6 flex items-center gap-2 text-sm font-medium text-zinc-500 transition-colors duration-200 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50 md:hidden"
+              >
+                <ArrowLeftIcon className="h-4 w-4" />
+                Back
+              </button>
+
               <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
                 {selected.title}
               </h2>
 
-              <p className="mt-4 text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
+              <p className="mt-4 text-base leading-relaxed text-justify text-zinc-600 dark:text-zinc-400">
                 {selected.longDescription}
               </p>
 

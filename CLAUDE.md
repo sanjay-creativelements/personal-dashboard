@@ -146,12 +146,15 @@ Deployed on **Vercel**. Push to `main` triggers a production deploy automaticall
 
 ### Projects page split-panel (`app/components/ProjectsExplorer.js`)
 - **Default state**: cards in a `flex flex-wrap justify-center` 2-column grid with `cardReveal` stagger animation on mount.
-- **Click a card**: pill-based transition opens a detail view.
-- **Left sidebar**: pill buttons (one per project, 200px wide). Selected pill is violet. Clicking a different pill swaps the detail panel with a `fadeIn` animation.
+- **Click a card**: behaviour differs by screen size (see below).
+- **Left sidebar**: pill buttons (one per project, 200px wide). Selected pill is violet. Clicking a different pill swaps the detail panel with a `fadeIn` animation. Hidden on mobile (`hidden md:flex`).
 - **Right panel**: project title, `longDescription`, tags, GitHub button. Slides in with `slideInRight` on first open.
-- **Back to grid**: "Back to grid" button collapses pills in reverse stagger, grid re-mounts with `cardReveal`.
+- **Back to grid** (desktop): "Back to grid" button in the sidebar collapses pills in reverse stagger, grid re-mounts with `cardReveal`.
+- **Back button** (mobile): "← Back" button at the top of the detail panel (`md:hidden`) snaps instantly back to grid.
 
-  **Open sequence:** `grid → hiding-content → forming-pills → detail`
+  #### Desktop (≥ 768px) — animated pill transition
+
+  **Open:** `grid → hiding-content → forming-pills → detail`
 
   | Phase | What's animated | Timing |
   |---|---|---|
@@ -159,13 +162,20 @@ Deployed on **Vercel**. Push to `main` triggers a production deploy automaticall
   | `forming-pills` | Layout snaps to sidebar, pills grow in (staggered, `pillGrow`) | 300ms |
   | `detail` | Detail panel slides in from right | CSS animation |
 
-  **Close sequence:** `detail → hiding-detail → shrinking-pills → grid`
+  **Close:** `detail → hiding-detail → shrinking-pills → grid`
 
   | Phase | What's animated | Timing |
   |---|---|---|
   | `hiding-detail` | Detail panel fades to opacity 0 | 300ms |
   | `shrinking-pills` | Pills shrink in reverse stagger (`pillShrink`) | 300ms |
   | `grid` | Cards re-mount with `cardReveal` stagger | CSS animation |
+
+  #### Mobile (< 768px) — instant swap, no pill animation
+
+  **Open:** `grid → detail` (instant, no intermediate phases)
+  **Close:** `detail → grid` (instant)
+
+  The sidebar nav is CSS-hidden on mobile. `isMobile` is tracked via `matchMedia("(max-width: 767px)")` inside `useEffect` with a resize listener, so handlers know to skip the pill phases entirely.
 
   **Critical invariant:** `maxHeight` on cards always snaps instantly (no CSS transition). It only changes while opacity is already 0 so the snap is invisible and text never reflows.
 
@@ -206,6 +216,9 @@ All accent colors derive from the violet/indigo/sky palette. **Never introduce a
 
 ### Tailwind-only styling
 All styling uses Tailwind utility classes. Do not add custom CSS classes except for `@keyframes` in `globals.css` (Tailwind can't express these). Inline `style` props are acceptable only for values that change at runtime (animation phases, dynamic widths).
+
+### Text alignment
+All paragraph/body text uses `text-justify`. Apply this to every `<p>` that contains prose content — bio, "What I'm building", card descriptions, project detail descriptions. Do not apply it to labels, headings, tags, or UI chrome.
 
 ### Dark mode
 Use `dark:` Tailwind variants — not media queries. The variant is class-based via `@custom-variant dark (&:where(.dark, .dark *))`. Any new component that needs dark styles must use `dark:` prefixed classes.

@@ -27,7 +27,7 @@ const cardInner = (title, description, tags, contentVisible, contentPresent, tit
       }}
     >
       <div className="mt-4 flex flex-col gap-4">
-        <p className="flex-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+        <p className="flex-1 text-sm leading-relaxed text-justify text-zinc-500 dark:text-zinc-400">
           {description}
         </p>
         <div className="flex flex-wrap gap-2">

@@ -74,7 +74,7 @@ export default async function ProjectPage({ params }) {
             {title}
           </h1>
 
-          <p className="mt-4 text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
+          <p className="mt-4 text-base leading-relaxed text-justify text-zinc-600 dark:text-zinc-400">
             {longDescription}
           </p>
 
