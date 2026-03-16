@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { projects } from "@/lib/projects";
 import ProjectsExplorer from "@/app/components/ProjectsExplorer";
 
 export const metadata = {
@@ -42,14 +41,6 @@ export default function ProjectsPage() {
         <h1 className="mb-8 text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
           Projects
         </h1>
-
-        <div className="mb-12 flex items-center gap-4">
-          <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-            Built this week
-          </h1>
-          <div className="flex-1 border-t border-zinc-200 dark:border-zinc-800" />
-          <span className="text-sm text-zinc-400">{projects.length} projects</span>
-        </div>
 
         <ProjectsExplorer />
 

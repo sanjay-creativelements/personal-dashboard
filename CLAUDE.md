@@ -16,13 +16,26 @@ npm run start      # serves the production build
 npm run lint       # ESLint
 ```
 
-Node.js ≥ 18 required. No environment variables needed — all data is static. The GitHub Activity section fetches from the public GitHub API client-side (no token required, subject to rate limiting).
+Node.js ≥ 18 required. The GitHub Activity section fetches from the public GitHub API client-side (no token required, subject to rate limiting).
+
+### Environment variables
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | Optional (recommended) | Powers AI-generated project descriptions on `/projects` via `claude-haiku-4-5`. Without it, the site falls back to GitHub repo descriptions or "No description available." |
+
+For local dev, create a `.env.local` file:
+```
+ANTHROPIC_API_KEY=sk-ant-...
+```
 
 ---
 
 ## Deployment
 
-Deployed on **Vercel**. Push to `main` triggers a production deploy automatically. No build configuration changes needed — Vercel detects Next.js automatically. The project has no environment variables.
+Deployed on **Vercel**. Push to `main` triggers a production deploy automatically. No build configuration changes needed — Vercel detects Next.js automatically.
+
+**Required Vercel env var:** Set `ANTHROPIC_API_KEY` in the Vercel project settings (Settings → Environment Variables) for AI descriptions to work in production.
 
 ---
 
