@@ -49,7 +49,8 @@ Deployed on **Vercel**. Push to `main` triggers a production deploy automaticall
 | Dark mode | Class-based (`.dark` on `<html>`), controlled by ThemeToggle + inline script |
 | Fonts | Geist Sans + Geist Mono via `next/font/google` |
 | Images | `next/image` with `fill` + `object-cover` for the profile photo |
-| Data | Static JS array in `lib/projects.js` |
+| Data | Dynamic: GitHub API + Anthropic AI via `/api/projects`; static `lib/projects.js` for `/projects/[slug]` only |
+| AI | `@anthropic-ai/sdk` with `claude-haiku-4-5`, cached via `unstable_cache` (24h revalidation) |
 | Favicon | `/public/favicon-round.png` (circular-cropped PNG, generated with `sharp`) |
 
 ---
@@ -67,6 +68,11 @@ Deployed on **Vercel**. Push to `main` triggers a production deploy automaticall
 │   ├── page.js                    Home page — profile, contact card, "What I'm building",
 │   │                              GitHub activity, CTA button, footer
 │   │
+│   ├── api/
+│   │   └── projects/
+│   │       └── route.js           GET /api/projects — fetches GitHub repos, generates AI
+│   │                              descriptions, groups by created_at, returns JSON
+│   │
 │   ├── projects/
 │   │   ├── page.js                /projects — server shell + <ProjectsExplorer />
 │   │   └── [slug]/
@@ -74,15 +80,18 @@ Deployed on **Vercel**. Push to `main` triggers a production deploy automaticall
 │   │
 │   └── components/
 │       ├── IntroOverlay.js        Fullscreen intro animation (client component)
-│       ├── ProjectCard.js         Reusable card — link mode or button mode
-│       ├── ProjectsExplorer.js    Pill-based split-panel explorer on /projects (client)
+│       ├── ProjectCard.js         Reusable card — link mode or button mode; shows
+│       │                          "Updated X days ago" label via updatedAt prop
+│       ├── ProjectsExplorer.js    Pill-based split-panel explorer on /projects (client);
+│       │                          fetches /api/projects, renders time-group headers
 │       ├── GitHubActivity.js      GitHub recent repos feed (client component)
 │       ├── FloatingOrbs.js        Decorative background orbs, both themes (server component)
 │       ├── ThemeToggle.js         Fixed top-right sun/moon toggle (client component)
 │       └── QuoteFooter.js         Unused — kept in repo but not rendered anywhere
 │
 ├── lib/
-│   └── projects.js                Single source of truth for all project data
+│   └── projects.js                Static fallback data — used only by /projects/[slug]
+│                                  (dynamic /projects page now sources from /api/projects)
 │
 ├── public/
 │   ├── profile.png                Profile photo (used in avatar)
@@ -147,6 +156,47 @@ Deployed on **Vercel**. Push to `main` triggers a production deploy automaticall
 - Error state: graceful "Unable to load activity." message.
 - Language colours are defined in a `LANGUAGE_COLORS` map inside the component.
 
+### Dynamic projects API (`app/api/projects/route.js`)
+- **GET `/api/projects`** — returns `{ groups: [{ group, projects }] }`.
+
+#### Card types
+Each project card has a `type` field:
+- `"repo"` with `isRepoSummary: false` — standalone repo with no subfolders (single card)
+- `"repo"` with `isRepoSummary: true` — repo that has subfolders; shows a subtle "repo" badge on the card
+- `"folder"` — a root-level subfolder inside a repo; links to the folder on GitHub
+
+#### Data flow per repo
+1. **GitHub fetch**: pulls all non-fork repos (`sort=updated&per_page=100`), filters `my-nextjs-app` and `personal-dashboard`. Cache: 1h.
+2. **Subfolder detection** (`getRepoSubfolders`): fetches the shallow (non-recursive) root tree for the repo. Filters `type === "tree"` items whose `path` contains no `/` (root-level only). Tries `main` then `master`. Returns `[{ name, branch }]`.
+3. **If no subfolders**: emits one standalone `type: "repo"` card with `isRepoSummary: false`.
+4. **If subfolders exist**: emits one `type: "repo"` card with `isRepoSummary: true`, then one `type: "folder"` card per subfolder.
+5. All cards from the same repo share the same `timeGroup` (based on repo `created_at`).
+
+#### Slug format
+- Repo cards: `slug = repoName`
+- Folder cards: `slug = "${repoName}--${folderName}"` (double-dash separator)
+
+#### AI descriptions
+- **Repo-level** (`getRepoAIDescriptions` / `getCachedRepoAIDescriptions`): uses `getRepoContent` — recursive tree, README + up to 2 code files, ≤4000 chars. Cache key: `project-ai-descriptions-v7`.
+- **Folder-level** (`getFolderAIDescriptions` / `getCachedFolderAIDescriptions`): uses `getFolderContent` — same recursive tree (HTTP-cached, no duplicate request), filters blobs by `path.startsWith(folderName + "/")`. Cache key: `project-folder-ai-descriptions-v1`.
+- Both call `claude-haiku-4-5` asking for `{"short":"...","long":"..."}` JSON. Regex-extracts first `{...}` block to handle model preamble. Falls back to GitHub description (repo) or generic string (folder) on any failure.
+- **API key check is OUTSIDE `unstable_cache`** in both wrapper functions — prevents caching fallback results when the key is missing.
+
+#### GitHub link
+- Repo card: `repo.html_url`
+- Folder card: `https://github.com/{user}/{repo}/tree/{branch}/{folderName}`
+
+#### Project object shape
+`{ slug, title, description (≤100 chars, AI short), longDescription (50-80 words, AI long), tags ([language]), githubUrl, updatedAt (ISO), timeGroup, type ("repo"|"folder"), isRepoSummary (bool), repoName, folderName? }`
+
+#### Time grouping
+Uses `created_at`, UTC calendar-day arithmetic: 0–6 days → "This Week", 7–13 → "Last Week", 14–29 → "Last Month", 30+ → "Older". `GROUP_ORDER = ["This Week", "Last Week", "Last Month", "Older"]`.
+
+#### Other
+- Batch size: 5 repos processed with `Promise.all` per batch (avoids Vercel timeouts).
+- All `catch` blocks log via `console.error` — never silent.
+- Logging prefixes: `[projects:folders]`, `[projects:content]`, `[projects:folder-content]`, `[projects:ai]`.
+
 ### Project cards (`app/components/ProjectCard.js`)
 - Two rendering modes controlled by the `onClick` prop:
   - **Link mode** (default): renders a `<Link>` to `/projects/[slug]`
@@ -155,12 +205,15 @@ Deployed on **Vercel**. Push to `main` triggers a production deploy automaticall
   - `contentVisible` — controls opacity of description + tags
   - `contentPresent` — controls maxHeight of description + tags (snaps instantly, never transitions)
   - `titleVisible` — controls opacity of the card title separately
+- `updatedAt` prop (ISO string): shows "Updated today / yesterday / N days ago" at the bottom. Computed by `formatUpdatedAt()`.
+- `isRepoSummary` prop (bool, default `false`): when `true`, shows a small "repo" badge (uppercase, zinc/border style) in the top-right of the card header, aligned with the title. The badge respects the `titleVisible` opacity animation.
 - Hover: card lifts (`-translate-y-1`), violet border + violet glow box-shadow.
 
 ### Projects page split-panel (`app/components/ProjectsExplorer.js`)
-- **Default state**: cards in a `flex flex-wrap justify-center` 2-column grid with `cardReveal` stagger animation on mount.
+- **Data source**: fetches `/api/projects` on mount. Shows `<LoadingSkeleton />` (5 pulsing cards) while loading, and an error message with "Try again" button on failure. `retryCount` state triggers a re-fetch when incremented.
+- **Default state**: cards grouped by time (`created_at`) with section headers ("This Week", "Last Week", etc.), rendered as a `flex flex-wrap justify-center` 2-column grid with `cardReveal` stagger animation. `cardReveal` stagger index is global across all groups.
 - **Click a card**: behaviour differs by screen size (see below).
-- **Left sidebar**: pill buttons (one per project, 200px wide). Selected pill is violet. Clicking a different pill swaps the detail panel with a `fadeIn` animation. Hidden on mobile (`hidden md:flex`).
+- **Left sidebar**: pill buttons scoped to the same time group as the selected project (not all projects). Selected pill is violet. Clicking a different pill swaps the detail panel with a `fadeIn` animation. Hidden on mobile (`hidden md:flex`).
 - **Right panel**: project title, `longDescription`, tags, GitHub button. Slides in with `slideInRight` on first open.
 - **Back to grid** (desktop): "Back to grid" button in the sidebar collapses pills in reverse stagger, grid re-mounts with `cardReveal`.
 - **Back button** (mobile): "← Back" button at the top of the detail panel (`md:hidden`) snaps instantly back to grid.
@@ -248,9 +301,11 @@ Use `dark:` Tailwind variants — not media queries. The variant is class-based 
 - All `@keyframes` live in `globals.css`: `slideInRight`, `fadeIn`, `pillGrow`, `pillShrink`, `cardReveal`, `orbFloat1`, `orbFloat2`, `orbFloat3`.
 
 ### Project data
-All project content lives in **`lib/projects.js`** as a plain exported array. Both the `/projects` listing and `/projects/[slug]` pages import from there — never duplicate data.
+The `/projects` page now sources data **dynamically** from `/api/projects` (GitHub + AI). `lib/projects.js` is still used by `/projects/[slug]` for static generation at build time. These two data sources are independent — if you add a project to `lib/projects.js`, it won't automatically appear on the dynamic `/projects` listing (it will appear via the GitHub API instead).
 
-Each project object requires: `slug`, `title`, `description` (short, for cards), `longDescription` (50+ words, for detail view), `tags` (string array), `githubUrl`.
+Dynamic project objects have this shape: `{ slug, title, description (≤100 chars, AI short), longDescription (50-80 words, AI long), tags ([language]), githubUrl, updatedAt (ISO), timeGroup }`.
+
+Static project objects in `lib/projects.js` require: `slug`, `title`, `description`, `longDescription`, `tags`, `githubUrl`.
 
 ### Path aliases
 Use `@/` for all internal imports (e.g. `@/lib/projects`, `@/app/components/ProjectCard`). Relative imports are not used.
@@ -293,3 +348,17 @@ These props exist specifically for ProjectsExplorer's animation. When `ProjectCa
 
 ### `QuoteFooter.js` is unused
 `app/components/QuoteFooter.js` exists in the repo but is not imported or rendered anywhere. It was built then removed. Leave it as-is or delete it — it has no effect on the site.
+
+### GitHub tree API — never use `?recursive=false`
+The GitHub Git Trees API treats any non-empty string value for `recursive` as truthy, so `?recursive=false` actually triggers full recursive expansion (same as `?recursive=1`). `getRepoSubfolders` intentionally omits the `recursive` query parameter entirely (omitting it = non-recursive, root-only). Additionally, even if the API returns nested items unexpectedly, `getRepoSubfolders` filters items to only those whose `path` contains no `/`, guaranteeing root-level folders only.
+
+### `unstable_cache` and missing API keys
+If `ANTHROPIC_API_KEY` is absent when `/api/projects` first runs, the fallback (GitHub description) must NOT be cached — otherwise it gets served for 24h even after the key is added. The API key check lives in the `getAIDescriptions` wrapper outside `unstable_cache`. Never move that check inside `getCachedAIDescriptions`.
+
+If you ever need to bust the AI description cache (e.g. after fixing a prompt or changing the model), increment the cache key version string in `getCachedAIDescriptions`: `["project-ai-descriptions-v6"]` → `v7`, etc.
+
+### `created_at` vs `updated_at` in `/api/projects`
+Time grouping uses `created_at` — when the repo was first created. The `updatedAt` field on each project object is `repo.updated_at` (last push), used only for the "Updated X days ago" label on cards. Do not conflate these two fields.
+
+### GitHub API rate limiting in `/api/projects`
+`/api/projects` makes several GitHub API calls per repo (tree + file contents). The route uses `next: { revalidate }` on each `fetch`, so repeated requests within the revalidation window are served from Next.js's fetch cache and don't hit GitHub. In development with `npm run dev`, the fetch cache may not persist between restarts. If you see 403/rate-limit errors in the server logs, wait 60 seconds or add a `GITHUB_TOKEN` header to `GITHUB_HEADERS` (not currently implemented).
