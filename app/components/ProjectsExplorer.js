@@ -38,7 +38,7 @@ const PROJECTS = [
     title: "rankmob.io",
     description: "A rank tracking and SEO analytics platform — built across the full stack with Next.js",
     longDescription:
-      "A full-stack rank tracking and SEO analytics platform built with Next.js. " +
+      "A full-stack rank tracking and AI powered SEO automation platform built with 19 AI Agents. " +
       "I work across both the frontend and backend — building the UI, wiring up APIs, " +
       "and handling the data layer. It's a live product used by real users, which means " +
       "every decision I make in the codebase has a direct impact on what people experience.",
