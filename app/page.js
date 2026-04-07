@@ -1,7 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import IntroOverlay from "@/app/components/IntroOverlay";
-import GitHubActivity from "@/app/components/GitHubActivity";
 
 function GitHubIcon() {
   return (
@@ -172,9 +171,6 @@ export default function Dashboard() {
             </p>
           </div>
         </section>
-
-        {/* GitHub Activity */}
-        <GitHubActivity />
 
         {/* Projects CTA */}
         <section className="flex justify-center">
