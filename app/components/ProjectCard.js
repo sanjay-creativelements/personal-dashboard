@@ -13,7 +13,7 @@ function formatUpdatedAt(updatedAt) {
   return `Updated ${days} days ago`;
 }
 
-const cardInner = (title, description, tags, updatedAt, contentVisible, contentPresent, titleVisible, isRepoSummary) => {
+const cardInner = (title, description, tags, updatedAt, contentVisible, contentPresent, titleVisible, isRepoSummary, status) => {
   const updatedLabel = formatUpdatedAt(updatedAt);
   return (
     <div className="flex h-full flex-col rounded-2xl border-2 border-zinc-300 bg-white p-6 shadow-sm transition-all duration-300 group-hover:-translate-y-1 group-hover:border-violet-400 group-hover:shadow-[0_0_0_1px_theme(colors.violet.400),0_8px_24px_-4px_theme(colors.violet.200)] dark:border dark:border-zinc-800 dark:bg-zinc-900 dark:group-hover:border-violet-500 dark:group-hover:shadow-[0_0_0_1px_theme(colors.violet.500),0_8px_24px_-4px_theme(colors.violet.950)]">
@@ -61,6 +61,17 @@ const cardInner = (title, description, tags, updatedAt, contentVisible, contentP
               </span>
             ))}
           </div>
+          {status && (
+            <div className="flex items-center gap-1.5">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
+              </span>
+              <span className="text-xs font-medium text-green-600 dark:text-green-400">
+                {status}
+              </span>
+            </div>
+          )}
           {updatedLabel && (
             <p className="text-xs text-zinc-400 dark:text-zinc-600">
               {updatedLabel}
@@ -78,6 +89,7 @@ export default function ProjectCard({
   description,
   tags,
   updatedAt,
+  status,
   onClick,
   contentVisible = true,
   contentPresent = true,
@@ -87,14 +99,14 @@ export default function ProjectCard({
   if (onClick) {
     return (
       <button onClick={onClick} className="group block h-full w-full text-left">
-        {cardInner(title, description, tags, updatedAt, contentVisible, contentPresent, titleVisible, isRepoSummary)}
+        {cardInner(title, description, tags, updatedAt, contentVisible, contentPresent, titleVisible, isRepoSummary, status)}
       </button>
     );
   }
 
   return (
     <Link href={`/projects/${slug}`} className="group block h-full">
-      {cardInner(title, description, tags, updatedAt, contentVisible, contentPresent, titleVisible, isRepoSummary)}
+      {cardInner(title, description, tags, updatedAt, contentVisible, contentPresent, titleVisible, isRepoSummary, status)}
     </Link>
   );
 }

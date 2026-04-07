@@ -172,6 +172,47 @@ export default function Dashboard() {
           </div>
         </section>
 
+        {/* Currently Building */}
+        <section className="mb-16">
+          <div className="rounded-2xl border-2 border-zinc-300 bg-white p-8 dark:border dark:border-zinc-800 dark:bg-zinc-900">
+            <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-violet-500 dark:text-violet-400">
+              Currently Building
+            </h2>
+            <div className="flex flex-col gap-3">
+              <a
+                href="https://rankmob.io"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-fit text-xl font-bold tracking-tight text-zinc-900 transition-colors duration-200 hover:text-violet-600 dark:text-zinc-50 dark:hover:text-violet-400"
+              >
+                rankmob.io
+              </a>
+              <p className="text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
+                A rank tracking and SEO analytics platform
+              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex gap-2">
+                  <span className="rounded-md bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                    Frontend
+                  </span>
+                  <span className="rounded-md bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                    Backend
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
+                  </span>
+                  <span className="text-xs font-medium text-green-600 dark:text-green-400">
+                    In Progress
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Projects CTA */}
         <section className="flex justify-center">
           <Link

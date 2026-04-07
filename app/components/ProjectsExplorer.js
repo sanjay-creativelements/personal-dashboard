@@ -3,6 +3,89 @@
 import { useState, useRef, useEffect } from "react";
 import ProjectCard from "@/app/components/ProjectCard";
 
+// ── ✏️  EDIT YOUR PROJECTS HERE ───────────────────────────────────────────────
+//
+// Each object in PROJECTS represents one card on the /projects page.
+//
+// Required fields:
+//   slug          — URL-safe unique ID (used in the sidebar, must be unique)
+//   title         — Card heading / sidebar pill label
+//   description   — Short blurb shown on the card (keep it under ~100 chars)
+//   longDescription — Full paragraph shown in the detail panel (50–80 words)
+//   tags          — Array of strings shown as small badges, e.g. ["Next.js", "TypeScript"]
+//   githubUrl     — Full GitHub URL for the "Click to see my work" button
+//   updatedAt     — ISO date string used for "Updated X days ago" label,
+//                   e.g. "2026-03-15T00:00:00Z" — set to today's date for new projects
+//   timeGroup     — Which section header the card appears under.
+//                   Must be one of: "This Week" | "Last Week" | "Last Month" | "Older"
+//
+// Optional fields:
+//   isRepoSummary — Set to true to show a small "repo" badge on the card.
+//                   Useful when a card represents a whole repo rather than a subfolder.
+//                   Defaults to false if omitted.
+//
+// Tips:
+//   • Order within each group is the order entries appear in this array.
+//   • To add a project: copy an existing object, change its fields, save. Done.
+//   • To remove a project: delete its object from the array.
+//   • To move between groups: change its timeGroup field.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+const PROJECTS = [
+  {
+    slug: "rankmob-io",
+    title: "rankmob.io",
+    description: "A rank tracking and SEO analytics platform — built across the full stack with Next.js",
+    longDescription:
+      "A full-stack rank tracking and SEO analytics platform built with Next.js. " +
+      "I work across both the frontend and backend — building the UI, wiring up APIs, " +
+      "and handling the data layer. It's a live product used by real users, which means " +
+      "every decision I make in the codebase has a direct impact on what people experience.",
+    tags: ["Frontend", "Backend"],
+    githubUrl: "https://rankmob.io",
+    updatedAt: null,
+    timeGroup: "This Week",
+    status: "In Progress",
+  },
+  {
+    slug: "personal-dashboard",
+    title: "Personal Dashboard",
+    description: "A public-facing portfolio and dashboard site built with Next.js.",
+    longDescription:
+      "A live portfolio site built with Next.js 16, React 19, and Tailwind CSS v4. " +
+      "Features a dark-mode-first design, animated intro overlay, floating orb background, " +
+      "a split-panel project explorer with pill navigation, and AI-generated project descriptions " +
+      "via claude-haiku-4-5. Deployed on Vercel with automatic production deploys on push to main.",
+    tags: ["Next.js", "React", "Tailwind CSS", "Anthropic AI"],
+    githubUrl: "https://github.com/sanjay-creativelements/personal-dashboard",
+    updatedAt: "2026-03-20T00:00:00Z",
+    timeGroup: "This Week",
+    isRepoSummary: true,
+  },
+  // ── Add more projects below. Copy the block above, change the fields. ────────
+  // {
+  //   slug: "my-project",
+  //   title: "My Project",
+  //   description: "One sentence about what this project does.",
+  //   longDescription:
+  //     "Two to four sentences describing the project in more depth. " +
+  //     "Mention the tech stack, what problem it solves, and any interesting details.",
+  //   tags: ["React", "Node.js"],
+  //   githubUrl: "https://github.com/sanjay-creativelements/my-project",
+  //   updatedAt: "2026-04-01T00:00:00Z",
+  //   timeGroup: "This Week",
+  // },
+];
+
+// ── Group ordering — do not change unless you rename the timeGroup values above.
+const GROUP_ORDER = ["This Week", "Last Week", "Last Month", "Older"];
+
+// Derive the grouped structure once (static — no fetch needed).
+const GROUPS = GROUP_ORDER
+  .map((group) => ({ group, projects: PROJECTS.filter((p) => p.timeGroup === group) }))
+  .filter((g) => g.projects.length > 0);
+
 // ── Phase state machine ────────────────────────────────────────────────────────
 //
 // DESKTOP OPEN:   grid → hiding-content → forming-pills → detail
@@ -50,31 +133,6 @@ function ArrowLeftIcon({ className = "h-3.5 w-3.5" }) {
   );
 }
 
-// ── Loading skeleton — 5 pulse cards ──────────────────────────────────────────
-
-function LoadingSkeleton() {
-  return (
-    <div className="flex flex-wrap justify-center gap-5">
-      {Array.from({ length: 5 }, (_, i) => (
-        <div key={i} className="w-full sm:w-[calc(50%-0.625rem)]">
-          <div className="rounded-2xl border-2 border-zinc-300 bg-white p-6 shadow-sm dark:border dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="h-4 w-3/5 animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
-            <div className="mt-4 space-y-2">
-              <div className="h-3 animate-pulse rounded-md bg-zinc-100 dark:bg-zinc-800" />
-              <div className="h-3 w-5/6 animate-pulse rounded-md bg-zinc-100 dark:bg-zinc-800" />
-              <div className="h-3 w-2/3 animate-pulse rounded-md bg-zinc-100 dark:bg-zinc-800" />
-            </div>
-            <div className="mt-5 flex gap-2">
-              <div className="h-5 w-16 animate-pulse rounded-md bg-zinc-100 dark:bg-zinc-800" />
-              <div className="h-5 w-12 animate-pulse rounded-md bg-zinc-100 dark:bg-zinc-800" />
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function ProjectsExplorer() {
@@ -82,52 +140,19 @@ export default function ProjectsExplorer() {
   const [selectedSlug, setSelectedSlug] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Data state
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [groups, setGroups] = useState([]); // [{ group: string, projects: Project[] }]
-  const [retryCount, setRetryCount] = useState(0);
-
   const timers = useRef([]);
   // "slideInRight" on first open; "fadeIn" when switching via sidebar.
   const detailAnim = useRef("slideInRight 0.3s ease both");
 
   // Flat list of all projects across all time groups (used for selection lookup).
-  const allProjects = groups.flatMap((g) => g.projects);
+  const allProjects = GROUPS.flatMap((g) => g.projects);
 
   // The group that contains the selected project — drives sidebar scope.
   const selectedGroupData =
-    groups.find((g) => g.projects.some((p) => p.slug === selectedSlug)) ?? null;
+    GROUPS.find((g) => g.projects.some((p) => p.slug === selectedSlug)) ?? null;
   // Only show projects from the same time group in the sidebar.
   const sidebarProjects = selectedGroupData?.projects ?? [];
   const sidebarGroupName = selectedGroupData?.group ?? "";
-
-  // ── Fetch projects ──────────────────────────────────────────────────────────
-  useEffect(() => {
-    let cancelled = false;
-
-    setLoading(true);
-    setError(null);
-
-    fetch("/api/projects")
-      .then((res) => {
-        if (!res.ok) throw new Error(`Failed to load projects (${res.status})`);
-        return res.json();
-      })
-      .then((data) => {
-        if (cancelled) return;
-        if (data.error) throw new Error(data.error);
-        setGroups(data.groups ?? []);
-        setLoading(false);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setError(err.message);
-        setLoading(false);
-      });
-
-    return () => { cancelled = true; };
-  }, [retryCount]);
 
   // Cleanup animation timers on unmount
   useEffect(() => {
@@ -207,32 +232,12 @@ export default function ProjectsExplorer() {
 
   const selected = allProjects.find((p) => p.slug === selectedSlug) ?? null;
 
-  // ── Loading / error states ────────────────────────────────────────────────
-
-  if (loading) return <LoadingSkeleton />;
-
-  if (error) {
-    return (
-      <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-10 text-center dark:border-zinc-800 dark:bg-zinc-900/50">
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          Unable to load projects — {error}
-        </p>
-        <button
-          onClick={() => setRetryCount((c) => c + 1)}
-          className="mt-4 text-sm font-medium text-violet-500 transition-colors hover:text-violet-600 dark:text-violet-400 dark:hover:text-violet-300"
-        >
-          Try again
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div>
       {/* ── Card grid with time-group headers ──────────────────────────────── */}
       {showGrid && (
         <div>
-          {groups.map(({ group, projects: groupProjects }) => (
+          {GROUPS.map(({ group, projects: groupProjects }) => (
             <div key={group} className="mb-10">
 
               {/* Time-group header */}
@@ -378,6 +383,18 @@ export default function ProjectsExplorer() {
                   </span>
                 ))}
               </div>
+
+              {selected.status && (
+                <div className="mt-4 flex items-center gap-1.5">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
+                  </span>
+                  <span className="text-xs font-medium text-green-600 dark:text-green-400">
+                    {selected.status}
+                  </span>
+                </div>
+              )}
 
               <div className="mt-8 border-t border-zinc-100 pt-8 dark:border-zinc-800">
                 <a
