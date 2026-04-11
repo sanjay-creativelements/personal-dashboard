@@ -320,7 +320,9 @@ export default function Dashboard() {
 
 
       {/* ── NAVBAR ── fixed, fully transparent, content capped at 1200px ── */}
-      <nav ref={navbarRef} style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 50, background: "linear-gradient(to bottom, rgba(9,9,11,0.85) 0%, rgba(9,9,11,0.85) 70%, transparent 100%)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}>
+      <nav ref={navbarRef} style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 50, background: "linear-gradient(to bottom, rgba(9,9,11,0.85) 0%, rgba(9,9,11,0.85) 70%, transparent 100%)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", opacity: navVisible ? 1 : 0,
+      pointerEvents: navVisible ? "auto" : "none",
+      transition: "opacity 0.6s ease",}}>
         <div
           className="flex items-center justify-between py-5"
           style={{ maxWidth: "1200px", margin: "0 auto", width: "100%", paddingLeft: "2rem", paddingRight: "2rem", paddingBottom: "20px" }}
