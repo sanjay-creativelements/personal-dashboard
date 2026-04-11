@@ -8,12 +8,12 @@ export default function FloatingOrbs() {
       <div className="hidden sm:block">
         {/* Left orb — far left edge only */}
         <div
-         className="absolute -left-40 top-[20%] h-[380px] w-[380px] rounded-full bg-violet-600 opacity-[0.22]"
+         className="absolute -left-40 top-[20%] h-[380px] w-[380px] rounded-full bg-violet-600 opacity-[0.35]"
           style={{ filter: "blur(150px)", animation: "orbUpDown 8s ease-in-out infinite" }}
         />
         {/* Right orb — far right edge only */}
         <div
-          className="absolute -right-40 top-[25%] h-[380px] w-[380px] rounded-full bg-indigo-600 opacity-[0.20]"
+          className="absolute -right-40 top-[25%] h-[380px] w-[380px] rounded-full bg-indigo-600 opacity-[0.32]"
           style={{ filter: "blur(150px)", animation: "orbUpDown 10s ease-in-out infinite", animationDelay: "-4s" }}
         />
       </div>
