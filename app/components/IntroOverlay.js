@@ -10,22 +10,16 @@ export default function IntroOverlay() {
   const [phase, setPhase] = useState("covered");
 
   useEffect(() => {
-    // Return visit: skip the animation entirely and remove the overlay.
-    if (sessionStorage.getItem("introPlayed")) {
-      setPhase("done");
+    if (sessionStorage.getItem('introPlayed')) {
+      setPhase('done');
       return;
     }
+    sessionStorage.setItem('introPlayed', 'true');
 
-    sessionStorage.setItem("introPlayed", "true");
-
-    // One frame after mount: enable transitions and start the text fade-in (1.2s).
-    const enter = setTimeout(() => setPhase("enter"), 50);
-    // Text fully visible — start fading it out (1.2s).
-    const fadeTextOut = setTimeout(() => setPhase("fadeText"), 2250);
-    // Text gone — fade the whole overlay out (0.8s).
-    const fadeOverlay = setTimeout(() => setPhase("fadeOverlay"), 3450);
-    // Remove from DOM — exactly 4.5s total.
-    const remove = setTimeout(() => setPhase("done"), 4500);
+    const enter = setTimeout(() => setPhase('enter'), 50);
+    const fadeTextOut = setTimeout(() => setPhase('fadeText'), 2250);
+    const fadeOverlay = setTimeout(() => setPhase('fadeOverlay'), 3450);
+    const remove = setTimeout(() => setPhase('done'), 4500);
 
     return () => {
       clearTimeout(enter);

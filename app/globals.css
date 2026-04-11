@@ -22,10 +22,16 @@
 }
 
 body {
-  background: var(--background);
+  background-color: #09090b !important;
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@keyframes float {
+  0%,  100% { transform: translateY(0px); }
+  50%       { transform: translateY(-12px); }
+}
+
 
 @keyframes slideInRight {
   from {
@@ -61,21 +67,155 @@ body {
   to   { opacity: 1; transform: translateY(0);    }
 }
 
-/* Floating orb animations — large, organic, independent drift paths */
-@keyframes orbFloat1 {
-  0%,  100% { transform: translate(  0px,   0px); }
-  25%       { transform: translate( 45px, -55px); }
-  50%       { transform: translate(-30px, -25px); }
-  75%       { transform: translate( 20px,  50px); }
+.hide-on-small {
+  display: flex !important;
 }
-@keyframes orbFloat2 {
-  0%,  100% { transform: translate(  0px,   0px); }
-  25%       { transform: translate(-50px,  40px); }
-  50%       { transform: translate( 40px,  60px); }
-  75%       { transform: translate(-20px, -40px); }
+
+@keyframes slideToLeft {
+  from { transform: translateX(250px); opacity: 0; }
+  to   { transform: translateX(0px);   opacity: 1; }
 }
-@keyframes orbFloat3 {
-  0%,  100% { transform: translate(  0px,   0px) scale(1);    }
-  33%       { transform: translate( 60px, -50px) scale(1.08); }
-  66%       { transform: translate(-40px,  30px) scale(0.94); }
+
+.about-img-col {
+  display: flex;
+  align-items: flex-start;
+}
+
+/* Tablet (768px - 1100px) — show image but smaller */
+@media (max-width: 1100px) and (min-width: 768px) {
+  .about-img-col {
+    width: 280px !important;
+    height: 85vh !important;
+    padding-top: 40px !important;
+  }
+  .about-img-col > div:first-child {
+    width: 200px !important;
+    height: 200px !important;
+  }
+}
+
+/* Mobile (<768px) — no image at all */
+@media (max-width: 767px) {
+  .about-img-col {
+    display: none !important;
+  }
+}
+
+/* Mobile text fix */
+@media (max-width: 767px) {
+  .about-text-col {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+  .about-text-col h2 {
+    font-size: 1.6rem !important;
+    word-break: break-word !important;
+  }
+  .about-text-col p {
+    font-size: 0.85rem !important;
+    max-width: 100% !important;
+    word-break: break-word !important;
+    overflow: hidden !important;
+  }
+}
+
+.projects-grid {
+  display: flex;
+  flex-direction: row;
+  gap: 3rem;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .projects-grid {
+    flex-direction: column;
+    gap: 2rem;
+  }
+  .project-card {
+    width: 100% !important;
+  }
+  .project-desc {
+    padding: 0 !important;
+  }
+}
+
+.hide-on-small { display: flex !important; }
+.desktop-nav { display: flex !important; gap: 2.5rem; align-items: center; }
+.hamburger-btn { display: none !important; }
+
+@media (max-width: 1150px) {
+  .hide-on-small, .desktop-nav { display: none !important; }
+  .hamburger-btn { flex-direction: column; display: flex !important; }
+}
+
+@media (max-width: 768px) {
+  .home-img-col { display: none !important; }
+  .home-annotation {
+    margin-left: 130px !important;
+    margin-right: 0 !important;
+  }
+  .home-annotation svg { transform: scaleX(-1) !important; }
+}
+
+@media (max-width: 768px) {
+  .home-img-col {
+    display: none !important;
+  }
+  .home-annotation svg {
+    transform: scaleX(-1) !important;
+  }
+}
+
+@keyframes orbUpDown {
+  0%   { transform: translateY(0px); }
+  50%  { transform: translateY(-60px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes orbFloat {
+  0%   { transform: translate(0px, 0px); }
+  25%  { transform: translate(30px, -50px); }
+  50%  { transform: translate(-20px, -80px); }
+  75%  { transform: translate(-40px, -30px); }
+  100% { transform: translate(0px, 0px); }
+}
+
+.desktop-orb { display: block; }
+.mobile-orb  { display: none; }
+
+@media (max-width: 768px) {
+  .desktop-orb { display: none; }
+  .mobile-orb  { display: block; }
+}
+
+.symbol {
+  position: absolute;
+  font-weight: 700;
+  cursor: default;
+  user-select: none;
+  transition: color 1.5s ease, opacity 1.5s ease;
+  z-index: 3;
+  display: block;
+  line-height: 1;
+}
+
+nav {
+  position: fixed;
+  overflow: visible !important;
+}
+
+nav::after {
+  content: '';
+  position: absolute;
+  bottom: -30px;
+  left: 0;
+  right: 0;
+  height: 30px;
+  background: linear-gradient(to bottom, rgba(9,9,11,0.7) 0%, transparent 100%);
+  pointer-events: none;
 }

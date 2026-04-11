@@ -1,16 +1,21 @@
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono, Poppins, Caveat } from "next/font/google";
 import "./globals.css";
-import ThemeToggle from "@/app/components/ThemeToggle";
-import FloatingOrbs from "@/app/components/FloatingOrbs";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const poppins = Poppins({
   subsets: ["latin"],
+  weight: ["400", "500", "600", "800", "900"],
+  variable: "--font-poppins",
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+const caveat = Caveat({
+  subsets: ["latin"],
+  weight: ["600"],
+  variable: "--font-caveat",
 });
 
 export const metadata = {
@@ -37,9 +42,7 @@ export default function RootLayout({ children }) {
           }}
         />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <FloatingOrbs />
-        <ThemeToggle />
+      <body className={`${poppins.className} ${geistMono.variable} ${caveat.variable} antialiased`}>
         {children}
       </body>
     </html>
