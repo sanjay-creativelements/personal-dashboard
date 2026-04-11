@@ -116,8 +116,7 @@ export default function Dashboard() {
 
   return (
     <div
-      className="bg-zinc-950"
-      style={{ position: "relative", minHeight: "100vh" }}
+    style={{ position: "relative", minHeight: "100vh" }}
     >
       {/* ── BACKGROUND ORBS ── */}
       <FloatingOrbs />
