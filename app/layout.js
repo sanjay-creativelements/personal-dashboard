@@ -29,19 +29,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    // suppressHydrationWarning prevents React from warning when the inline
-    // script adds .dark to <html> before hydration, causing a class mismatch.
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        {/* Runs synchronously before first paint — reads localStorage and
-            system preference, then applies .dark to <html> if needed.
-            This prevents a flash of the wrong theme on page load. */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('theme');if(t!=='light'){document.documentElement.classList.add('dark')}}catch(e){}})()`,
-          }}
-        />
-      </head>
+    <html lang="en">
       <body className={`${poppins.className} ${geistMono.variable} ${caveat.variable} antialiased`}>
         {children}
       </body>
