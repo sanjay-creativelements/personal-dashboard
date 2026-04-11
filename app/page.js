@@ -239,7 +239,7 @@ export default function Dashboard() {
           <span
             style={{ fontSize: "1.25rem", fontWeight: "700", color: "#ffffff" }}
           >
-            {greeting} 👋
+            {greeting} ✦
           </span>
 
           <div className="desktop-nav">
