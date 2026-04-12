@@ -330,7 +330,7 @@ export default function BookingModal({ isOpen, onClose }) {
                 <span style={{ width: "16px", height: "16px", border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.7s linear infinite", display: "inline-block" }} />
                 Sending...
               </>
-            ) : "Send Request ✦"}
+            ) : "Submit ✦"}
           </button>
 
         </form>
