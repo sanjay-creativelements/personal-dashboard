@@ -809,6 +809,47 @@ export default function Dashboard() {
               >
                 rankmob.io
               </h3>
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  marginTop: "0.25rem",
+                }}
+              >
+                <span style={{ position: "relative", display: "inline-flex" }}>
+                  <span
+                    style={{
+                      position: "absolute",
+                      width: "8px",
+                      height: "8px",
+                      borderRadius: "50%",
+                      background: "#a78bfa",
+                      opacity: 0.75,
+                      animation: "ping 1.5s cubic-bezier(0,0,0.2,1) infinite",
+                    }}
+                  />
+                  <span
+                    style={{
+                      width: "8px",
+                      height: "8px",
+                      borderRadius: "50%",
+                      background: "#1fac32",
+                      display: "inline-block",
+                    }}
+                  />
+                </span>
+                <span
+                  style={{
+                    fontSize: "0.75rem",
+                    fontWeight: "600",
+                    color: "#1fac32",
+                    letterSpacing: "0.05em",
+                  }}
+                >
+                  Currently Building
+                </span>
+              </div>
               <p style={{ fontSize: "0.95rem", color: "#a1a1aa", margin: 0 }}>
                 AI powered SEO Automation platform
               </p>
@@ -927,8 +968,8 @@ export default function Dashboard() {
                 <span style={{ color: "#ffffff", fontWeight: "600" }}>
                   rankmob.io actually does the work.
                 </span>{" "}
-                It automates the complete SEO workflow — from spotting issues to
-                fixing them — so your site climbs Google rankings{" "}
+                It automates the complete SEO workflow right from spotting
+                issues to fixing them, so your site climbs Google rankings{" "}
                 <span
                   style={{
                     color: "#c4b5fd",
@@ -937,7 +978,9 @@ export default function Dashboard() {
                   }}
                 >
                   without you lifting a finger.
-                </span>
+                </span>{" "}
+                I'm contributing to the platform — building and refining the
+                user-facing experience.
               </p>
               <a
                 href="https://rankmob.io"
@@ -1099,10 +1142,10 @@ export default function Dashboard() {
                 wordBreak: "break-word",
               }}
             >
-              After finishing computer science Engineering, the urge to build and create pulled me
-              into web developement. My goal isn&apos;t just delivery — it&apos;s to
-              envision beyond what you ask for and ship something that outlasts
-              the brief.
+              After finishing computer science Engineering, the urge to build
+              and create pulled me into web developement. My goal isn&apos;t
+              just delivery — it&apos;s to envision beyond what you ask for and
+              ship something that outlasts the brief.
             </p>
             <div
               style={{

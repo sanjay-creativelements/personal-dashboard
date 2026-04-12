@@ -304,7 +304,7 @@ export default function BookingModal({ isOpen, onClose }) {
             <label style={labelStyle}>Project Description *</label>
             <textarea
               required name="description" value={form.description} onChange={handleChange}
-              placeholder="In simple words explain waht you wanna build, what problem it solves, any specific requirements..."
+              placeholder="In simple words explain what you wanna build, what problem it solves, any specific requirements..."
               rows={4}
               style={{ ...inputStyle, resize: "vertical", minHeight: "100px", lineHeight: 1.6 }}
               disabled={status === "submitting"}
