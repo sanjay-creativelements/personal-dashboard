@@ -989,7 +989,6 @@ export default function Dashboard() {
               width: "500px",
               flexShrink: 0,
               height: "95vh",
-              paddingTop: "110px",
               display: "flex",
               alignItems: "flex-start",
               background: "transparent",
