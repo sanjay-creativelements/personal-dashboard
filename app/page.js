@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import IntroOverlay from "@/app/components/IntroOverlay";
 import FloatingOrbs from "@/app/components/FloatingOrbs";
+import BookingModal from "@/app/components/BookingModal";
 
 function GitHubIcon() {
   return (
@@ -69,6 +70,7 @@ export default function Dashboard() {
   const [greeting, setGreeting] = useState("Hello");
   const [navVisible, setNavVisible] = useState(false);
   const [litSymbol, setLitSymbol] = useState(0);
+  const [bookingOpen, setBookingOpen] = useState(false);
 
   // Greeting
   useEffect(() => {
@@ -115,9 +117,7 @@ export default function Dashboard() {
   });
 
   return (
-    <div
-    style={{ position: "relative", minHeight: "100vh" }}
-    >
+    <div style={{ position: "relative", minHeight: "100vh" }}>
       {/* ── BACKGROUND ORBS ── */}
       <FloatingOrbs />
 
@@ -577,8 +577,8 @@ export default function Dashboard() {
               >
                 View Projects →
               </button>
-              <a
-                href="mailto:sanjay@creativelements.org"
+              <button
+                onClick={() => setBookingOpen(true)}
                 style={{
                   border: "1px solid #52525b",
                   color: "#ffffff",
@@ -590,10 +590,12 @@ export default function Dashboard() {
                   textDecoration: "none",
                   display: "inline-flex",
                   alignItems: "center",
+                  background: "none",
+                  cursor: "pointer",
                 }}
               >
                 Contact Me
-              </a>
+              </button>
             </div>
 
             <div style={{ display: "flex", gap: "1.25rem" }}>
@@ -1097,8 +1099,8 @@ export default function Dashboard() {
                 wordBreak: "break-word",
               }}
             >
-              Finished computer science, the urge to build and create pulled me
-              into web dev. My goal isn&apos;t just delivery — it&apos;s to
+              After finishing computer science Engineering, the urge to build and create pulled me
+              into web developement. My goal isn&apos;t just delivery — it&apos;s to
               envision beyond what you ask for and ship something that outlasts
               the brief.
             </p>
@@ -1111,8 +1113,8 @@ export default function Dashboard() {
                 marginBottom: "1.5rem",
               }}
             />
-            <a
-              href="mailto:sanjay@creativelements.org"
+            <button
+              onClick={() => setBookingOpen(true)}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -1120,11 +1122,14 @@ export default function Dashboard() {
                 color: "#a78bfa",
                 fontSize: "0.9rem",
                 fontWeight: "600",
-                textDecoration: "none",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
               }}
             >
               Let&apos;s work together ↗
-            </a>
+            </button>
           </div>
         </div>
       )}
@@ -1196,6 +1201,10 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+      <BookingModal
+        isOpen={bookingOpen}
+        onClose={() => setBookingOpen(false)}
+      />
     </div>
   );
 }
