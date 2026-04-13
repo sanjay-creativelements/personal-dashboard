@@ -215,7 +215,7 @@ export default function Dashboard() {
           top: 0,
           left: 0,
           right: 0,
-          zIndex: 49, // below overlay (50), above content
+          zIndex: 49, 
           background:
             "linear-gradient(to bottom, rgba(9,9,11,0.85) 0%, rgba(9,9,11,0.85) 70%, transparent 100%)",
           backdropFilter: "blur(12px)",
@@ -525,7 +525,7 @@ export default function Dashboard() {
             <p
               style={{
                 fontSize: "0.9rem",
-                color: "#71717a",
+                color: "#c4c4c4",
                 margin: "0 0 1.25rem 0",
                 lineHeight: 1.6,
               }}

@@ -111,7 +111,7 @@ nav::after {
   display: none !important;
 }
 
-/* Right quote column on home — visible above 1150px */
+
 .hide-on-small {
   display: flex !important;
 }
