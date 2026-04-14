@@ -600,14 +600,6 @@ export default function Dashboard() {
 
             <div style={{ display: "flex", gap: "1.25rem" }}>
               <a
-                href="https://github.com/sanjay-creativelements"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: "#71717a" }}
-              >
-                <GitHubIcon />
-              </a>
-              <a
                 href="https://www.linkedin.com/in/sanjay-waugh-50540625b/"
                 target="_blank"
                 rel="noopener noreferrer"
